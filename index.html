@@ -93,6 +93,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--surface);colo
 @media(max-width:1100px){.krow{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:640px){.main{padding:16px;}.header{padding:16px;}.krow{grid-template-columns:1fr 1fr;}.htop{flex-direction:column;}}
 </style>
+<script src="https://pdparker.github.io/dashboard-commons/commons.js" data-dash="cricos"></script>
 </head>
 <body>
 <header class="header">
@@ -150,6 +151,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--surface);colo
       </div>
     </div>
     <button class="clr-btn" id="clr-all">&#215; Clear all</button>
+    <button class="clr-btn" id="export-csv">&#8681; Export CSV</button>
   </div>
 </header>
 <main class="main">
@@ -211,12 +213,95 @@ function init(){
   ['st','code','name','cl','bf','inst'].forEach(function(c){
     document.getElementById('th-'+c).addEventListener('click',function(){doSort(c);});
   });
-  document.getElementById('sinput').addEventListener('input',function(e){srch=e.target.value;run();});
+  document.getElementById('sinput').addEventListener('input',function(e){srch=e.target.value;run();syncUrl();});
   document.getElementById('clr-all').addEventListener('click',clearAll);
+  document.getElementById('export-csv').addEventListener('click',exportCsv);
   document.addEventListener('click',function(e){
     if(!e.target.closest('.fg'))closeAll();
   });
-  run();
+  initFromUrl();
+}
+
+// ---- dashboard-commons: URL state (view, search, institution only — the
+// hierarchical level/field facets are not persisted, see 1.7 commit notes) ----
+//
+// CRICOS lists many providers under their registered legal name rather than
+// their common name (e.g. registry "Australian Catholic University" vs CRICOS
+// "Australian Catholic University Limited"), so registry name <-> CRICOS name
+// is a fuzzy match, not an exact one. Resolved once into a two-way map.
+var CRICOS_ID_TO_NAME={},CRICOS_NAME_TO_ID={};
+function buildCricosInstMap(reg){
+  reg.institutions.forEach(function(inst){
+    var lc=inst.name.toLowerCase();
+    var match=D.institutions.indexOf(inst.name)>=0 ? inst.name
+      : D.institutions.find(function(n){return n.toLowerCase().indexOf(lc)===0;});
+    if(match){CRICOS_ID_TO_NAME[inst.id]=match;CRICOS_NAME_TO_ID[match]=inst.id;}
+  });
+}
+
+function syncUrl(){
+  if(typeof DashCommons==='undefined')return;
+  DashCommons.state.set('view',curView==='all'?null:curView);
+  DashCommons.state.set('q',srch||null);
+  if(!sel.inst.size){DashCommons.state.set('inst',null);return;}
+  var ids=Array.from(sel.inst).map(function(n){return CRICOS_NAME_TO_ID[n]||null;}).filter(Boolean);
+  DashCommons.state.set('inst',ids.length?ids.join(','):null);
+}
+
+function initFromUrl(){
+  if(typeof DashCommons==='undefined'){run();return;}
+
+  // Read every param up front — applying one via its normal setter (e.g. setView)
+  // would call syncUrl() and wipe the others before they're read.
+  var v=DashCommons.state.get('view','all');
+  if(v==='new'||v==='removed'){
+    curView=v;
+    ['all','new','removed'].forEach(function(b){
+      var btn=document.getElementById('vb-'+b);
+      btn.className='vbtn'+(v===b?' v-'+b:'');
+    });
+  }
+
+  var q=DashCommons.state.get('q','');
+  if(q){srch=q;document.getElementById('sinput').value=q;}
+
+  var instParam=DashCommons.state.get('inst','');
+
+  DashCommons.registry().then(function(reg){
+    buildCricosInstMap(reg);
+    if(instParam){
+      instParam.split(',').forEach(function(id){
+        var name=CRICOS_ID_TO_NAME[id.trim()];
+        if(name) sel.inst.add(name);
+      });
+      updTrig('inst');
+    }
+    run();
+  }).catch(function(){run();});
+}
+
+// ---- CSV export (current filtered/searched result set) ----
+function exportCsv(){
+  var header=['status','code','course_name','level','broad_field','narrow_field','detailed_field','institution'];
+  var rows=[header];
+  filt.forEach(function(c){
+    rows.push([c.st,c.code,c.name,c.cl,c.bf||'',c.nf||'',c.df||'',c.inst]);
+  });
+  var csv=rows.map(function(r){
+    return r.map(function(v){
+      var s=String(v);
+      return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+    }).join(',');
+  }).join('\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='cricos-course-changes'+(curView!=='all'?'-'+curView:'')+'.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function buildList(key,vals){
@@ -285,6 +370,7 @@ function onChk(key,val,checked){
     built.df=false;
   }
   updTrig(key);run();
+  if(key==='inst')syncUrl();
 }
 
 function updTrig(key){
@@ -307,6 +393,7 @@ function doSelAll(key){
     if(v){sel[key].add(v);var cb=item.querySelector('input[type=checkbox]');if(cb)cb.checked=true;}
   });
   updTrig(key);run();
+  if(key==='inst')syncUrl();
 }
 function doClear(key){
   sel[key].clear();
@@ -314,6 +401,7 @@ function doClear(key){
   if(key==='bf'){built.nf=false;built.df=false;}
   if(key==='nf'){built.df=false;}
   updTrig(key);run();
+  if(key==='inst')syncUrl();
 }
 function clearAll(){KEYS.forEach(function(k){doClear(k);});}
 
@@ -324,6 +412,7 @@ function setView(v){
     btn.className='vbtn'+(v===b?' v-'+b:'');
   });
   run();
+  syncUrl();
 }
 
 function run(){
