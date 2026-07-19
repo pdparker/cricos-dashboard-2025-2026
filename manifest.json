@@ -1,0 +1,11 @@
+{
+  "id": "cricos",
+  "title": "CRICOS Course Changes",
+  "url": "https://pdparker.github.io/cricos-dashboard-2025-2026/",
+  "repo": "pdparker/cricos-dashboard-2025-2026",
+  "lastBuild": "2026-04-12",
+  "dataSources": [
+    { "name": "CRICOS (Commonwealth Register of Institutions and Courses for Overseas Students)", "vintage": "2025 vs 2026 snapshot pair" }
+  ],
+  "notes": "Single snapshot-pair comparison, not a continuous time series."
+}
