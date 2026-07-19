@@ -3,9 +3,9 @@
   "title": "CRICOS Course Changes",
   "url": "https://pdparker.github.io/cricos-dashboard-2025-2026/",
   "repo": "pdparker/cricos-dashboard-2025-2026",
-  "lastBuild": "2026-04-12",
+  "lastBuild": "2026-07-19",
   "dataSources": [
     { "name": "CRICOS (Commonwealth Register of Institutions and Courses for Overseas Students)", "vintage": "2025 vs 2026 snapshot pair" }
   ],
-  "notes": "Single snapshot-pair comparison, not a continuous time series."
+  "notes": "Single snapshot-pair comparison. Market Intelligence analytics layer (net change by field/level, most active providers, course churn, ACU-competitor lens) added 2026-07; period auto-detected from the data so a future snapshot pair slots in with no code change."
 }
