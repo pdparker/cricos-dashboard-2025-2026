@@ -136,11 +136,41 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--surface);colo
 .an-empty{font-size:.72rem;color:var(--on-sv);font-style:italic;padding:12px 0;}
 @media(max-width:1100px){.krow{grid-template-columns:repeat(2,1fr);}.agrid{grid-template-columns:1fr;}}
 @media(max-width:640px){.main{padding:16px;}.header{padding:16px;}.krow{grid-template-columns:1fr 1fr;}.htop{flex-direction:column;}.abar-row{grid-template-columns:110px 1fr 50px;}.prov-cols{grid-template-columns:1fr;}}
-@media print{.apreset{display:none;}.acard{break-inside:avoid;box-shadow:none;border:1px solid #ddd;}}
+/* ── Print-only header (populated by JS on beforeprint) ── */
+.print-only{display:none;}
+
+/* ══════════════ Print stylesheet (board-pack-ready) ══════════════ */
+@media print{
+  @page{margin:14mm;}
+  body{background:#fff;}
+  /* Interactive-only chrome: hide, don't touch the data itself */
+  .header,.pg,.dd{display:none !important;}
+  .tcard .swrap{display:none !important;}
+  .apreset{display:none;}
+  /* Print-only header */
+  .print-only{display:block;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #1e1b18;}
+  .ph-title{font-family:'Manrope',sans-serif;font-size:1.1rem;font-weight:800;color:#1e1b18;}
+  .ph-meta{font-size:.72rem;color:#4a4541;margin-top:3px;}
+  .ph-filters{font-size:.72rem;color:#4a4541;margin-top:5px;font-style:italic;}
+  /* Preserve meaningful colour on chart/data containers (economy-mode print
+     otherwise strips background colour from net-change bars, badges, KPIs) */
+  .main{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  /* White cards with a hairline border instead of box-shadow (shadows print as ink blobs) */
+  .kpi,.tcard,.acard{box-shadow:none;border:1px solid #ddd;break-inside:avoid;page-break-inside:avoid;}
+  .apanel,.dtbl tr{break-inside:avoid;page-break-inside:avoid;}
+  .krow{grid-template-columns:repeat(4,1fr);}
+  .agrid{grid-template-columns:1fr 1fr;}
+  /* Expand scrollable containers so filtered content isn't clipped */
+  .tbl-scroll{overflow-x:visible !important;}
+  .churn-list{max-height:none !important;overflow:visible !important;}
+  .dtbl{font-size:8.5pt;}
+  .dtbl thead th,.dtbl tbody td{padding:5px 8px;}
+}
 </style>
 <script src="https://pdparker.github.io/dashboard-commons/commons.js" data-dash="cricos"></script>
 </head>
 <body>
+<div class="print-only" id="printHeader"></div>
 <header class="header">
   <div class="htop">
     <div>
@@ -156,40 +186,40 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--surface);colo
   <div class="fbar">
     <span class="flbl">Filter by</span>
     <div class="fg">
-      <button class="ft" id="ft-level"><span id="ft-level-txt">Course Level</span><span class="ft-badge" id="ft-level-n"></span><span class="ft-arrow">&#9662;</span></button>
-      <div class="dd" id="dd-level">
+      <button class="ft" id="ft-level" aria-haspopup="true" aria-expanded="false" aria-controls="dd-level"><span id="ft-level-txt">Course Level</span><span class="ft-badge" id="ft-level-n"></span><span class="ft-arrow">&#9662;</span></button>
+      <div class="dd" id="dd-level" role="group" aria-label="Course Level filter options">
         <div class="dd-search"><input type="text" placeholder="Search levels..." id="ds-level"></div>
         <div class="dd-acts"><button class="dd-act" id="da-level-all">Select all</button><button class="dd-act" id="da-level-none">Clear</button></div>
         <div class="dd-list" id="dl-level"></div>
       </div>
     </div>
     <div class="fg">
-      <button class="ft" id="ft-bf"><span id="ft-bf-txt">Broad Field</span><span class="ft-badge" id="ft-bf-n"></span><span class="ft-arrow">&#9662;</span></button>
-      <div class="dd" id="dd-bf">
+      <button class="ft" id="ft-bf" aria-haspopup="true" aria-expanded="false" aria-controls="dd-bf"><span id="ft-bf-txt">Broad Field</span><span class="ft-badge" id="ft-bf-n"></span><span class="ft-arrow">&#9662;</span></button>
+      <div class="dd" id="dd-bf" role="group" aria-label="Broad Field filter options">
         <div class="dd-search"><input type="text" placeholder="Search..." id="ds-bf"></div>
         <div class="dd-acts"><button class="dd-act" id="da-bf-all">Select all</button><button class="dd-act" id="da-bf-none">Clear</button></div>
         <div class="dd-list" id="dl-bf"></div>
       </div>
     </div>
     <div class="fg">
-      <button class="ft" id="ft-nf"><span id="ft-nf-txt">Narrow Field</span><span class="ft-badge" id="ft-nf-n"></span><span class="ft-arrow">&#9662;</span></button>
-      <div class="dd" id="dd-nf">
+      <button class="ft" id="ft-nf" aria-haspopup="true" aria-expanded="false" aria-controls="dd-nf"><span id="ft-nf-txt">Narrow Field</span><span class="ft-badge" id="ft-nf-n"></span><span class="ft-arrow">&#9662;</span></button>
+      <div class="dd" id="dd-nf" role="group" aria-label="Narrow Field filter options">
         <div class="dd-search"><input type="text" placeholder="Search..." id="ds-nf"></div>
         <div class="dd-acts"><button class="dd-act" id="da-nf-all">Select all</button><button class="dd-act" id="da-nf-none">Clear</button></div>
         <div class="dd-list" id="dl-nf"></div>
       </div>
     </div>
     <div class="fg">
-      <button class="ft" id="ft-df"><span id="ft-df-txt">Detailed Field</span><span class="ft-badge" id="ft-df-n"></span><span class="ft-arrow">&#9662;</span></button>
-      <div class="dd dd-r" id="dd-df">
+      <button class="ft" id="ft-df" aria-haspopup="true" aria-expanded="false" aria-controls="dd-df"><span id="ft-df-txt">Detailed Field</span><span class="ft-badge" id="ft-df-n"></span><span class="ft-arrow">&#9662;</span></button>
+      <div class="dd dd-r" id="dd-df" role="group" aria-label="Detailed Field filter options">
         <div class="dd-search"><input type="text" placeholder="Search..." id="ds-df"></div>
         <div class="dd-acts"><button class="dd-act" id="da-df-all">Select all</button><button class="dd-act" id="da-df-none">Clear</button></div>
         <div class="dd-list" id="dl-df"></div>
       </div>
     </div>
     <div class="fg">
-      <button class="ft" id="ft-inst"><span id="ft-inst-txt">Institution</span><span class="ft-badge" id="ft-inst-n"></span><span class="ft-arrow">&#9662;</span></button>
-      <div class="dd dd-r dd-w" id="dd-inst">
+      <button class="ft" id="ft-inst" aria-haspopup="true" aria-expanded="false" aria-controls="dd-inst"><span id="ft-inst-txt">Institution</span><span class="ft-badge" id="ft-inst-n"></span><span class="ft-arrow">&#9662;</span></button>
+      <div class="dd dd-r dd-w" id="dd-inst" role="group" aria-label="Institution filter options">
         <div class="dd-search"><input type="text" placeholder="Search institutions..." id="ds-inst"></div>
         <div class="dd-acts"><button class="dd-act" id="da-inst-all">Select all</button><button class="dd-act" id="da-inst-none">Clear</button></div>
         <div class="dd-list" id="dl-inst"></div>
@@ -250,7 +280,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--surface);colo
         <input type="text" class="sinput" id="sinput" placeholder="Search courses, codes, institutions...">
       </div>
     </div>
-    <div style="overflow-x:auto">
+    <div class="tbl-scroll" style="overflow-x:auto">
       <table class="dtbl">
         <thead><tr>
           <th id="th-st">Status <span class="sa" id="sa-st">&#9662;</span></th>
@@ -293,9 +323,33 @@ function init(){
   buildList('bf',D.broadFields); built.bf=true;
   KEYS.forEach(function(k){
     document.getElementById('ft-'+k).addEventListener('click',function(e){e.stopPropagation();openDD(k);});
+    document.getElementById('ft-'+k).addEventListener('keydown',function(e){
+      if(e.key==='ArrowDown'||e.key===' '&&e.currentTarget.getAttribute('aria-expanded')!=='true'){
+        e.preventDefault();openDD(k);
+      }
+    });
     document.getElementById('da-'+k+'-all').addEventListener('click',function(){doSelAll(k);});
     document.getElementById('da-'+k+'-none').addEventListener('click',function(){doClear(k);});
     document.getElementById('ds-'+k).addEventListener('input',function(e){ddSearch(k,e.target.value);});
+    // Keyboard support for the checkbox list: Up/Down move focus between the
+    // (currently visible, i.e. search-filtered) options; Escape closes and
+    // returns focus to the trigger button.
+    var listEl=document.getElementById('dl-'+k);
+    listEl.addEventListener('keydown',function(e){
+      if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;
+      e.preventDefault();
+      var cbs=Array.prototype.filter.call(listEl.querySelectorAll('.ddi'),function(it){return it.style.display!=='none';})
+        .map(function(it){return it.querySelector('input[type=checkbox]');}).filter(Boolean);
+      if(!cbs.length)return;
+      var idx=cbs.indexOf(document.activeElement);
+      if(idx===-1){(e.key==='ArrowDown'?cbs[0]:cbs[cbs.length-1]).focus();return;}
+      var next=e.key==='ArrowDown'?Math.min(idx+1,cbs.length-1):Math.max(idx-1,0);
+      cbs[next].focus();
+    });
+    setDDFocusable(document.getElementById('dd-'+k),false);
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&document.querySelector('.dd.open'))closeAll(true);
   });
   ['all','new','removed'].forEach(function(v){
     document.getElementById('vb-'+v).addEventListener('click',function(){setView(v);});
@@ -473,6 +527,14 @@ function rebuildDF(){
   buildList('df',v);
 }
 
+// Keyboard focus should never land on an option that's visually hidden (the
+// dropdown panel is only opacity:0 + pointer-events:none while closed, which
+// does not remove its inputs/buttons from the Tab order on its own).
+function setDDFocusable(dd,focusable){
+  dd.querySelectorAll('input,button').forEach(function(el){
+    if(focusable) el.removeAttribute('tabindex'); else el.setAttribute('tabindex','-1');
+  });
+}
 function openDD(key){
   if(!built[key]){
     if(key==='nf') rebuildNF();
@@ -483,9 +545,27 @@ function openDD(key){
   var dd=document.getElementById('dd-'+key);
   var wasOpen=dd.classList.contains('open');
   closeAll();
-  if(!wasOpen) dd.classList.add('open');
+  if(!wasOpen){
+    dd.classList.add('open');
+    setDDFocusable(dd,true);
+    var trig=document.getElementById('ft-'+key);
+    trig.setAttribute('aria-expanded','true');
+    var searchInput=dd.querySelector('.dd-search input');
+    if(searchInput) searchInput.focus();
+  }
 }
-function closeAll(){document.querySelectorAll('.dd.open').forEach(function(d){d.classList.remove('open');});}
+function closeAll(restoreFocus){
+  document.querySelectorAll('.dd.open').forEach(function(d){
+    d.classList.remove('open');
+    setDDFocusable(d,false);
+    var key=d.id.replace('dd-','');
+    var trig=document.getElementById('ft-'+key);
+    if(trig){
+      trig.setAttribute('aria-expanded','false');
+      if(restoreFocus) trig.focus();
+    }
+  });
+}
 
 function ddSearch(key,q){
   var lc=q.toLowerCase();
@@ -700,7 +780,14 @@ function renderTbl(){
     var av=(a[sCol]||'').toLowerCase(),bv=(b[sCol]||'').toLowerCase();
     return(sDir==='asc'?1:-1)*(av<bv?-1:av>bv?1:0);
   });
-  var start=pg*PG,end=Math.min(start+PG,sorted.length);
+  var start,end;
+  if(printMode){
+    // Print shows the currently-filtered set from the top, capped so a huge
+    // filtered list doesn't try to force thousands of rows onto the page.
+    start=0;end=Math.min(PRINT_CAP,sorted.length);
+  } else {
+    start=pg*PG;end=Math.min(start+PG,sorted.length);
+  }
   var rows=sorted.slice(start,end);
   var tbody=document.getElementById('tbody');
   if(rows.length===0){
@@ -717,9 +804,46 @@ function renderTbl(){
   }
   var nc=0,rc=0;
   filt.forEach(function(c){if(c.st==='new')nc++;else rc++;});
-  document.getElementById('tcount').textContent=filt.length.toLocaleString()+' courses · '+nc.toLocaleString()+' new · '+rc.toLocaleString()+' removed';
+  var countTxt=filt.length.toLocaleString()+' courses · '+nc.toLocaleString()+' new · '+rc.toLocaleString()+' removed';
+  if(printMode&&sorted.length>PRINT_CAP){
+    countTxt+=' — print view: showing first '+PRINT_CAP.toLocaleString()+' of '+sorted.length.toLocaleString()+' (narrow the filters, or use Export CSV on screen, for the full set)';
+  }
+  document.getElementById('tcount').textContent=countTxt;
   renderPg(sorted.length);
 }
+
+// ---- Print support: swap the paginated table for a capped full list, and
+// populate the print-only header with title/date/active-filter summary ----
+var PRINT_CAP=300,printMode=false,printSavedPg=0;
+function activeFilterSummary(){
+  var parts=[];
+  if(curView!=='all') parts.push(curView==='new'?'View: New in 2026':'View: Removed in 2026');
+  KEYS.forEach(function(k){
+    if(sel[k].size){
+      var vals=Array.from(sel[k]);
+      parts.push(LBLS[k]+': '+(vals.length<=2?vals.join(', '):vals.length+' selected'));
+    }
+  });
+  if(srch) parts.push('Search: "'+srch+'"');
+  return parts.length?parts.join(' · '):'All courses, no filters applied';
+}
+function buildPrintHeader(){
+  var el=document.getElementById('printHeader');
+  if(!el)return;
+  var today=new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
+  el.innerHTML='<div class="ph-title">CRICOS Course Changes 2025 &#8594; 2026</div>'+
+    '<div class="ph-meta">Printed from pdparker.github.io/cricos-dashboard-2025-2026/ &middot; '+esc(today)+'</div>'+
+    '<div class="ph-filters">'+esc(activeFilterSummary())+'</div>';
+}
+window.addEventListener('beforeprint',function(){
+  printMode=true;printSavedPg=pg;
+  buildPrintHeader();
+  renderTbl();
+});
+window.addEventListener('afterprint',function(){
+  printMode=false;pg=printSavedPg;
+  renderTbl();
+});
 
 function renderPg(total){
   var tp=Math.ceil(total/PG),c=pg;
