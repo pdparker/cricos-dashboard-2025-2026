@@ -101,8 +101,13 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--surface);colo
 .ap-btn:hover{background:var(--secondary);color:#fff;border-color:var(--secondary);}
 .ap-btn.on{background:var(--secondary);color:#fff;border-color:var(--secondary);}
 .agrid{display:grid;grid-template-columns:1fr 1fr;gap:22px 28px;}
+.apanel-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
 .apanel-t{font-family:'Manrope',sans-serif;font-size:.78rem;font-weight:700;color:var(--on-s);}
 .apanel-s{font-size:.68rem;color:var(--on-sv);margin:2px 0 12px;}
+.apanel-dl{font-family:'Inter',sans-serif;font-size:.62rem;font-weight:600;padding:3px 8px;border:1px solid rgba(121,76,144,.25);border-radius:5px;background:var(--surface-low);color:var(--secondary);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s;}
+.apanel-dl:hover{background:var(--secondary);color:#fff;border-color:var(--secondary);}
+.apanel-dl:focus-visible{outline:2px solid var(--secondary);outline-offset:2px;}
+.apanel-dl:disabled{opacity:.6;cursor:default;}
 .abars{display:flex;flex-direction:column;gap:7px;}
 .abar-row{display:grid;grid-template-columns:150px 1fr 62px;align-items:center;gap:10px;}
 .abar-lbl{font-size:.7rem;color:var(--on-s);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -147,6 +152,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--surface);colo
   .header,.pg,.dd{display:none !important;}
   .tcard .swrap{display:none !important;}
   .apreset{display:none;}
+  .apanel-dl{display:none !important;}
   /* Print-only header */
   .print-only{display:block;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #1e1b18;}
   .ph-title{font-family:'Manrope',sans-serif;font-size:1.1rem;font-weight:800;color:#1e1b18;}
@@ -168,6 +174,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--surface);colo
 }
 </style>
 <script src="https://pdparker.github.io/dashboard-commons/commons.js" data-dash="cricos"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 <div class="print-only" id="printHeader"></div>
@@ -251,22 +258,34 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--surface);colo
     </div>
     <div class="agrid">
       <div class="apanel">
-        <div class="apanel-t">Net change by field of education</div>
+        <div class="apanel-hdr">
+          <div class="apanel-t">Net change by field of education</div>
+          <button type="button" class="apanel-dl" data-panel-name="cricos-net-change-by-field">&#8681; Download PNG</button>
+        </div>
         <div class="apanel-s">Blue = added &middot; Red = removed &middot; ranked by net</div>
         <div class="abars" id="an-field"></div>
       </div>
       <div class="apanel">
-        <div class="apanel-t">Net change by course level</div>
+        <div class="apanel-hdr">
+          <div class="apanel-t">Net change by course level</div>
+          <button type="button" class="apanel-dl" data-panel-name="cricos-net-change-by-level">&#8681; Download PNG</button>
+        </div>
         <div class="apanel-s">Where the movement sits &mdash; VET awards vs higher-education degrees</div>
         <div class="abars" id="an-level"></div>
       </div>
       <div class="apanel">
-        <div class="apanel-t">Most active providers</div>
+        <div class="apanel-hdr">
+          <div class="apanel-t">Most active providers</div>
+          <button type="button" class="apanel-dl" data-panel-name="cricos-most-active-providers">&#8681; Download PNG</button>
+        </div>
         <div class="apanel-s">Ranked by net course change (added &minus; removed)</div>
         <div class="prov-cols" id="an-prov"></div>
       </div>
       <div class="apanel">
-        <div class="apanel-t">Course churn</div>
+        <div class="apanel-hdr">
+          <div class="apanel-t">Course churn</div>
+          <button type="button" class="apanel-dl" data-panel-name="cricos-course-churn">&#8681; Download PNG</button>
+        </div>
         <div class="apanel-s">Same course dropped by some providers and picked up by others &mdash; a provider reshuffle, not a market exit</div>
         <div class="churn-list" id="an-churn"></div>
       </div>
@@ -363,6 +382,9 @@ function init(){
   document.getElementById('ap-acu').addEventListener('click',presetAcu);
   document.getElementById('ap-unis').addEventListener('click',presetUnis);
   document.getElementById('ap-reset').addEventListener('click',presetReset);
+  document.querySelectorAll('.apanel-dl').forEach(function(btn){
+    btn.addEventListener('click',function(){downloadPanelPng(btn);});
+  });
   document.addEventListener('click',function(e){
     if(!e.target.closest('.fg'))closeAll();
   });
@@ -768,6 +790,24 @@ function renderAnalytics(set){
         '<span class="cf-in" title="providers that added it">+'+e.inn+'</span></div></div>';
     }).join('');
   }
+}
+
+// Rasterize a whole .apanel (title + subtitle + chart) to a PNG and trigger
+// a download via DashCommons. These charts are plain CSS/HTML bars (no
+// canvas/SVG), so html2canvas is the only way to export them as an image.
+function downloadPanelPng(btn){
+  var panel=btn.closest('.apanel');
+  if(!panel||typeof html2canvas==='undefined')return;
+  var name=btn.getAttribute('data-panel-name')||'cricos-chart';
+  var origTxt=btn.textContent;
+  btn.disabled=true;btn.textContent='Rendering…';
+  html2canvas(panel,{backgroundColor:'#ffffff',scale:2}).then(function(canvas){
+    DashCommons.downloadFile(canvas.toDataURL('image/png'),name+'-'+new Date().toISOString().slice(0,10)+'.png');
+  }).catch(function(err){
+    console.error('PNG export failed',err);
+  }).then(function(){
+    btn.disabled=false;btn.textContent=origTxt;
+  });
 }
 
 // Trim the long legal suffix CRICOS appends, for compact display
